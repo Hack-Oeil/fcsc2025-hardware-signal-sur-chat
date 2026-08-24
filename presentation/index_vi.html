@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="vi">
+    <meta charset="UTF-8">
+    <!--Page Title-->
+    <title>Hack-Oeil - Cyrhades CTF</title>
+    <!--Meta Keywords and Description-->
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link rel="shortcut icon" href="./assets/images/favicon.ico" title="Favicon" />
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700,800' rel='stylesheet' type='text/css'>
+    <script src="./assets/js/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifie si la fenêtre est dans une iframe
+            if (window.self !== window.top) {
+                document.querySelectorAll('a').forEach((link) => {
+                    link.addEventListener('click', (event) => {
+                        const a = event.target.closest('a[href^="http"]');
+                        if (a) {
+                            event.preventDefault();
+                            window.parent.postMessage({
+                                type: "open-external",
+                                url: a.href
+                            }, "*");
+                        }
+                    });
+                });
+            }
+            // Active la coloration syntaxique :
+            if (window.hljs) {
+                hljs.highlightAll();
+            } else {
+                console.error("Highlight.js non chargé !");
+            }
+        });
+    </script>
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <!--Main Content Area-->
+        <main id="content">
+            <!--Ctf-->
+            <section class="ctf scrollto">
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Thử thách #564</h3>
+                            <h2 class="section-title">Tín hiệu trên mèo</h2>
+                            <p>
+Các kỹ thuật trải phổ chuỗi trực tiếp (DSSS) rất tuyệt vời. Chúng cho phép nhiều hệ thống vô tuyến giao tiếp đồng thời trên cùng một kênh (được gọi là CDMA: Đa truy cập phân chia theo mã) và cũng có thể chống chịu được tỷ số tín hiệu trên nhiễu rất bất lợi. Để minh họa điều này, chúng ta sẽ thực hiện thử nghiệm sau: liệu bạn có thể tìm lại flag nếu tôi truyền 22 ký tự của nó cùng một lúc và để làm mọi thứ phức tạp hơn, tôi thêm tiếng ồn… của mèo?
+<br /><br />
+Trong thử nghiệm này, tỷ lệ tín hiệu trên mèo của mỗi chữ cái có thể đạt tới -45dB!
+<br /><br />
+Tôi đã sử dụng mã Gold (hoặc chuỗi Gold, đặt theo tên của Robert Gold). Chúng được tạo ra bằng cách tính XOR của hai chuỗi có độ dài cực đại (2^n-1) từ hai LFSR (Linear Feedback Shift Register) có cùng độ dài (n), trong đó một chuỗi bị dịch so với chuỗi kia. Các chuỗi thu được có đặc tính tương quan chéo rất yếu với nhau: hoàn hảo cho thử nghiệm của chúng ta!
+<br /><br />
+Vệ tinh GPS cũng sử dụng mã Gold để phát tín hiệu, nhưng lưu ý, mã của tôi khác biệt: cả hai LFSR đều có độ dài 15 bit và có đa thức sinh như sau:
+<br /><br />
+<pre><code>G1(x) = x^15 + x^7 + 1
+G2(x) = x^15 + x^10 + x^5 + x^4 + 1</code></pre>
+<br />
+Các giá trị khởi tạo của cả hai thanh ghi là <code>0x7FFF</code>.
+<br /><br />
+Vì không muốn tệp âm thanh kéo dài quá lâu, tôi đã chồng 22 ký tự ASCII (8 bit) của flag lên nhau, mỗi ký tự có mã Gold riêng.
+<br /><br />
+Tôi không muốn làm phức tạp mọi chuyện: mẫu âm thanh đầu tiên chứa bit đầu tiên của chuỗi Gold, và cứ thế tiếp tục (một bit chuỗi cho mỗi mẫu âm thanh).
+<br /><br />
+Do đó, tín hiệu âm thanh bao gồm 262.136 mẫu, tức là 8 lần 32.767 (số bit của một ký tự nhân với độ dài của một trong các chuỗi Gold của tôi).
+<br /><br />
+Các bit của byte được truyền từ bit có trọng số cao nhất (MSB) đến bit có trọng số thấp nhất (LSB).
+<br /><br />
+Để tìm từng ký tự của flag, bạn phải sử dụng pha đặc trưng của mã Gold được gán cho nó.
+<br /><br />
+22 pha (tương ứng với số bit đi trước của thanh ghi <code>G2</code> so với thanh ghi <code>G1</code>) như sau:
+<br /><br />
+<pre><code>4, 7, 8, 24, 27, 31, 39, 42, 43, 49, 53, 54, 59, 62, 65, 73, 93, 99, 118, 119, 120, 128</code></pre>
+<br />
+Ví dụ: các bit đầu tiên của chuỗi thứ 22 (pha=128) là:
+<br /><br />
+<pre><code>1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, ...</code></pre>
+<br />
+Chuỗi này được biến đổi theo cách sau để tương quan với tín hiệu:
+<br /><br />
+<pre><code>+0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5, -0.5, ...</code></pre>
+<br />
+Nếu chuỗi tương quan, bit được giải mã có giá trị 0, nếu nó phản tương quan, bit được giải mã có giá trị 1.
+<br /><br />
+Về lý thuyết, sự tương quan của một chuỗi có độ dài 32767 sẽ mang lại mức tăng xử lý là <code>10*log10(32767) = 45,2 dB</code>. Liệu điều đó có đủ không? Hy vọng rằng những chú mèo đã không gây ra quá nhiều tiếng ồn!
+<br />
+<img src="./assets/images/signal-sur-chat.jpg">
+                            </p>
+                            <h4>Tệp cần nghiên cứu:</h4>
+                            <p>../files/signal-sur-chat.wav</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>FCSC 2025</h3>
+                            <h2 class="section-title">Hackropole</h2>
+                            <p class="section-subtitle">
+                                Liên kết chính thức:
+                                <a target="_blank" href="https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/">https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/</a>
+                                <br />
+                                Tác giả: PMR
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Học tập</h3>
+                            <h2 class="section-title">Tài liệu và Video</h2>
+                            <p class="section-subtitle">
+                                Hiện tại chưa có tài liệu
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Trợ giúp</h3>
+                            <h2 class="section-title">Lời khuyên và manh mối</h2>
+                            <p class="section-subtitle">
+                                <a target="_blank"
+                                    href="https://discord.com/channels/1175764392307077120/1175764601716092948">Chủ đề trên Discord</a>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+            <!--End of Ctf-->
+        </main>
+        <!--End Main Content Area-->
+
+        <a id="scrollUp" href="#wrapper" style="position: fixed; z-index: 1000;"
+            aria-label="Cuộn lên đầu trang" title="Quay lại đầu trang"></a>
+    </div>
+</body>
+
+</html>

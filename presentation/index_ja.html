@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="ja">
+    <meta charset="UTF-8">
+    <!--Page Title-->
+    <title>Hack-Oeil - Cyrhades CTF</title>
+    <!--Meta Keywords and Description-->
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link rel="shortcut icon" href="./assets/images/favicon.ico" title="Favicon" />
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700,800' rel='stylesheet' type='text/css'>
+    <script src="./assets/js/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifie si la fenêtre est dans une iframe
+            if (window.self !== window.top) {
+                document.querySelectorAll('a').forEach((link) => {
+                    link.addEventListener('click', (event) => {
+                        const a = event.target.closest('a[href^="http"]');
+                        if (a) {
+                            event.preventDefault();
+                            window.parent.postMessage({
+                                type: "open-external",
+                                url: a.href
+                            }, "*");
+                        }
+                    });
+                });
+            }
+            // Active la coloration syntaxique :
+            if (window.hljs) {
+                hljs.highlightAll();
+            } else {
+                console.error("Highlight.js non chargé !");
+            }
+        });
+    </script>
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <!--Main Content Area-->
+        <main id="content">
+            <!--Ctf-->
+            <section class="ctf scrollto">
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>チャレンジ #564</h3>
+                            <h2 class="section-title">猫の上の信号</h2>
+                            <p>
+直接拡散（DSSS）スペクトラム拡散技術は非常に優れた技術です。複数の無線システムが同じチャネル上で同時に通信することを可能にし（CDMA: 符号分割多元接続と呼ばれます）、極めて厳しいSN比（信号対雑音比）にも耐えることができます。これを実証するために、次の実験を行います：22文字のフラグを同時に送信し、さらに状況を難しくするために…猫の鳴き声ノイズを追加した場合、フラグを復元できるでしょうか？
+<br /><br />
+この実験では、各文字の信号対猫比は最大で-45dBにまで達します！
+<br /><br />
+私はゴールド符号（ロバート・ゴールドにちなんで名付けられたゴールド系列）を使用しました。これらは、同じ長さ（n）の2つのLFSR（線形帰還シフトレジスタ）から生成された2つの最長系列（M系列: 2^n-1）のXORを計算することによって作成され、一方の系列は他方に対してシフトされています。こうして得られた系列は相互相関が非常に低いという特性があり、今回の実験に最適です！
+<br /><br />
+GPS衛星も信号の送信にゴールド符号を使用していますが、ご注意ください。私のものは異なります：2つのLFSRの長さは15ビットで、次の生成多項式を持ちます：
+<br /><br />
+<pre><code>G1(x) = x^15 + x^7 + 1
+G2(x) = x^15 + x^10 + x^5 + x^4 + 1</code></pre>
+<br />
+両方のレジスタの初期値は <code>0x7FFF</code> です。
+<br /><br />
+音声ファイルが長くなりすぎないように、フラグの22個のASCII文字（8ビット）をそれぞれ独自のゴールド符号を使って重ね合わせました。
+<br /><br />
+構造をシンプルにするため、音声の最初のサンプルにはゴールド系列の最初のビットが含まれ、以下同様に続きます（音声サンプルあたり1つの系列ビット）。
+<br /><br />
+したがって、音声信号は262,136サンプルで構成されます。これは8×32,767（1文字のビット数×ゴールド系列の長さ）です。
+<br /><br />
+バイトのビットは最上位ビット（MSB）から最下位ビット（LSB）の順で送信されます。
+<br /><br />
+フラグの各文字を見つけるには、割り当てられたゴールド符号の特徴的な位相を使用する必要があります。
+<br /><br />
+22の位相（レジスタ <code>G2</code> がレジスタ <code>G1</code> に対して進んでいるビット数に対応）は次のとおりです：
+<br /><br />
+<pre><code>4, 7, 8, 24, 27, 31, 39, 42, 43, 49, 53, 54, 59, 62, 65, 73, 93, 99, 118, 119, 120, 128</code></pre>
+<br />
+たとえば、第22系列（位相=128）の最初の数ビットは次のようになります：
+<br /><br />
+<pre><code>1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, ...</code></pre>
+<br />
+この系列は、信号と相関を取るために次のように変換されます：
+<br /><br />
+<pre><code>+0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5, -0.5, ...</code></pre>
+<br />
+系列が相関している場合、復号されたビットは0となり、逆相関している場合は1となります。
+<br /><br />
+理論上、長さ32767の系列の相関処理により <code>10*log10(32767) = 45,2 dB</code> の処理利得が得られます。これで十分でしょうか？猫たちがあまり騒いでいないことを祈りましょう！
+<br />
+<img src="./assets/images/signal-sur-chat.jpg">
+                            </p>
+                            <h4>調査対象ファイル:</h4>
+                            <p>../files/signal-sur-chat.wav</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>FCSC 2025</h3>
+                            <h2 class="section-title">Hackropole</h2>
+                            <p class="section-subtitle">
+                                公式リンク:
+                                <a target="_blank" href="https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/">https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/</a>
+                                <br />
+                                作成者: PMR
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>学習</h3>
+                            <h2 class="section-title">ドキュメントと動画</h2>
+                            <p class="section-subtitle">
+                                現在ドキュメントはありません
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>ヘルプ</h3>
+                            <h2 class="section-title">ヒントと手がかり</h2>
+                            <p class="section-subtitle">
+                                <a target="_blank"
+                                    href="https://discord.com/channels/1175764392307077120/1175764601716092948">Discordスレッド</a>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+            <!--End of Ctf-->
+        </main>
+        <!--End Main Content Area-->
+
+        <a id="scrollUp" href="#wrapper" style="position: fixed; z-index: 1000;"
+            aria-label="ページトップに戻る" title="サイトのトップに戻る"></a>
+    </div>
+</body>
+
+</html>

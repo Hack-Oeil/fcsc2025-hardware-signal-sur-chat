@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="zh">
+    <meta charset="UTF-8">
+    <!--Page Title-->
+    <title>Hack-Oeil - Cyrhades CTF</title>
+    <!--Meta Keywords and Description-->
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link rel="shortcut icon" href="./assets/images/favicon.ico" title="Favicon" />
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700,800' rel='stylesheet' type='text/css'>
+    <script src="./assets/js/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifie si la fenêtre est dans une iframe
+            if (window.self !== window.top) {
+                document.querySelectorAll('a').forEach((link) => {
+                    link.addEventListener('click', (event) => {
+                        const a = event.target.closest('a[href^="http"]');
+                        if (a) {
+                            event.preventDefault();
+                            window.parent.postMessage({
+                                type: "open-external",
+                                url: a.href
+                            }, "*");
+                        }
+                    });
+                });
+            }
+            // Active la coloration syntaxique :
+            if (window.hljs) {
+                hljs.highlightAll();
+            } else {
+                console.error("Highlight.js non chargé !");
+            }
+        });
+    </script>
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <!--Main Content Area-->
+        <main id="content">
+            <!--Ctf-->
+            <section class="ctf scrollto">
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>挑战 #564</h3>
+                            <h2 class="section-title">猫上的信号</h2>
+                            <p>
+直接序列扩频（DSSS）技术非常强大。它们允许多个无线电系统在同一信道上同时通信（称为CDMA：码分多址），并且能够承受非常不利的信噪比。为了说明这一点，我们进行以下实验：如果我同时传输flag的22个字符，并且为了增加难度还加入了猫叫声…噪声，你能找回flag吗？
+<br /><br />
+在这次实验中，每个字母的信号与猫声之比最高可达 -45dB！
+<br /><br />
+我使用了Gold码（或Gold序列，得名于Robert Gold）。它们是通过对来自两个相同长度（n）的LFSR（线性反馈移位寄存器）生成的两个最大长度序列（2^n-1）进行异或（XOR）运算构成的，其中一个序列相对于另一个有所偏移。这样得到的序列具有互相关极弱的特性：这非常适合我们的实验！
+<br /><br />
+GPS卫星也使用Gold码来发射信号，但请注意，我使用的有所不同：两个LFSR的长度均为15位，其生成多项式为：
+<br /><br />
+<pre><code>G1(x) = x^15 + x^7 + 1
+G2(x) = x^15 + x^10 + x^5 + x^4 + 1</code></pre>
+<br />
+两个寄存器的初始值均为 <code>0x7FFF</code>。
+<br /><br />
+因为我不希望音频文件时间太长，所以我将flag的22个ASCII字符（8位）叠加在一起，每个字符都有自己的Gold码。
+<br /><br />
+我不想把事情搞得太复杂：音频的第一个采样点包含Gold序列的第一位，依此类推（每个音频采样点对应一个序列位）。
+<br /><br />
+因此，音频信号由 262,136 个采样点组成，即 8 乘以 32,767（一个字符的位数乘以我的一个Gold序列的长度）。
+<br /><br />
+字节的各个位按从最高有效位（MSB）到最低有效位（LSB）的顺序传输。
+<br /><br />
+要找到flag的每个字符，必须使用为其分配的Gold码的特征相位。
+<br /><br />
+22个相位（对应于寄存器 <code>G2</code> 领先于寄存器 <code>G1</code> 的位数）如下：
+<br /><br />
+<pre><code>4, 7, 8, 24, 27, 31, 39, 42, 43, 49, 53, 54, 59, 62, 65, 73, 93, 99, 118, 119, 120, 128</code></pre>
+<br />
+例如，第22个序列（相位=128）的前几个位是：
+<br /><br />
+<pre><code>1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, ...</code></pre>
+<br />
+该序列通过以下方式转换以与信号进行相关处理：
+<br /><br />
+<pre><code>+0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5, -0.5, ...</code></pre>
+<br />
+如果序列相关，解码出的位为0；如果反相关，解码出的位为1。
+<br /><br />
+理论上，长度为 32767 的序列相关处理将带来 <code>10*log10(32767) = 45,2 dB</code> 的处理增益。这足够吗？希望猫咪们没有发出太大的噪音！
+<br />
+<img src="./assets/images/signal-sur-chat.jpg">
+                            </p>
+                            <h4>待研究文件：</h4>
+                            <p>../files/signal-sur-chat.wav</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>FCSC 2025</h3>
+                            <h2 class="section-title">Hackropole</h2>
+                            <p class="section-subtitle">
+                                官方链接：
+                                <a target="_blank" href="https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/">https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/</a>
+                                <br />
+                                作者：PMR
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>学习</h3>
+                            <h2 class="section-title">文档与视频</h2>
+                            <p class="section-subtitle">
+                                目前暂无文档
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>帮助</h3>
+                            <h2 class="section-title">提示与线索</h2>
+                            <p class="section-subtitle">
+                                <a target="_blank"
+                                    href="https://discord.com/channels/1175764392307077120/1175764601716092948">Discord 帖子</a>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+            <!--End of Ctf-->
+        </main>
+        <!--End Main Content Area-->
+
+        <a id="scrollUp" href="#wrapper" style="position: fixed; z-index: 1000;"
+            aria-label="回到顶部" title="回到网站顶部"></a>
+    </div>
+</body>
+
+</html>

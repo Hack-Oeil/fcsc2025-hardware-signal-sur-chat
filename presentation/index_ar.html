@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html dir="rtl">
+
+<head lang="ar">
+    <meta charset="UTF-8">
+    <!--Page Title-->
+    <title>Hack-Oeil - تحديات Cyrhades CTF</title>
+    <!--Meta Keywords and Description-->
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link rel="shortcut icon" href="./assets/images/favicon.ico" title="Favicon" />
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700,800' rel='stylesheet' type='text/css'>
+    <script src="./assets/js/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifie si la fenêtre est dans une iframe
+            if (window.self !== window.top) {
+                document.querySelectorAll('a').forEach((link) => {
+                    link.addEventListener('click', (event) => {
+                        const a = event.target.closest('a[href^="http"]');
+                        if (a) {
+                            event.preventDefault();
+                            window.parent.postMessage({
+                                type: "open-external",
+                                url: a.href
+                            }, "*");
+                        }
+                    });
+                });
+            }
+            // Active la coloration syntaxique :
+            if (window.hljs) {
+                hljs.highlightAll();
+            } else {
+                console.error("Highlight.js non chargé !");
+            }
+        });
+    </script>
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <!--Main Content Area-->
+        <main id="content">
+            <!--Ctf-->
+            <section class="ctf scrollto">
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>التحدي #564</h3>
+                            <h2 class="section-title">إشارة على قط</h2>
+                            <p>
+تعتبر تقنيات طيف الانتشار بالتسلسل المباشر (DSSS) رائعة للغاية. فهي تسمح لعدة أنظمة راديوية بالتواصل في نفس الوقت عبر نفس القناة (ما يُعرف بـ CDMA: الوصول المتعدد بتقسيم الشفرة)، ويمكنها أيضاً مقاومة نسب إشارة إلى ضجيج منخفضة جداً. لتوضيح ذلك، سنقوم بإجراء التجربة التالية: هل يمكنك استعادة العلم (flag) إذا قمت بإرسال حروفه الـ 22 في نفس الوقت، ولزيادة التعقيد، أضفت ضجيج... قطط.
+<br /><br />
+في هذه التجربة، يمكن أن تصل نسبة الإشارة إلى القط لكل حرف إلى -45dB!
+<br /><br />
+لقد استخدمت شفرات غولد (أو تسلسلات غولد، نسبة إلى روبرت غولد). يتم تشكيلها بحساب XOR لتسلسلين بأقصى طول (2^n-1) صادرين من جهازي LFSR (سجل إزاحة التغذية الراجعة الخطية) بنفس الطول (n)، مع إزاحة أحد التسلسلين بالنسبة للآخر. تتميز التسلسلات الناتجة بخاصية ضعف الارتباط المتبادل فيما بينها: إنه أمر مثالي لتجربتنا!
+<br /><br />
+تستخدم أقمار GPS الصناعية أيضاً شفرات غولد لبث إشاراتها، لكن انتبه، شفراتي مختلفة: يبلغ طول كلا سجلي LFSR 15 بتاً، ولديهما كثيرات الحدود المولدة التالية:
+<br /><br />
+<pre><code>G1(x) = x^15 + x^7 + 1
+G2(x) = x^15 + x^10 + x^5 + x^4 + 1</code></pre>
+<br />
+قيم التهيئة الأولية لكلا السجلين هي <code>0x7FFF</code>.
+<br /><br />
+نظراً لأنني لم أرغب في أن يكون الملف الصوتي طويلاً جداً، فقد قمت بتركيب أحرف الـ ASCII الـ 22 (8 بت) للعلم فوق بعضها البعض، كل حرف بشفرة غولد خاصة به.
+<br /><br />
+لم أرغب في تعقيد الأمور: العينة الأولى من الصوت تحتوي على البت الأول من تسلسل غولد، وهكذا دواليك (بت تسلسل واحد لكل عينة صوتية).
+<br /><br />
+وبالتالي، تتكون الإشارة الصوتية من 262136 عينة، أي 8 مرات 32767 (عدد بتات الحرف مضروباً في طول أحد تسلسلات غولد الخاصة بي).
+<br /><br />
+يتم إرسال بتات البايت من البت الأكثر أهمية (MSB) إلى البت الأقل أهمية (LSB).
+<br /><br />
+للعثور على كل حرف من العلم، يجب استخدام الطور المميز لشفرة غولد المخصصة له.
+<br /><br />
+الأطوار الـ 22 (التي تتوافق مع عدد بتات تقدم السجل <code>G2</code> على السجل <code>G1</code>) هي كالتالي:
+<br /><br />
+<pre><code>4, 7, 8, 24, 27, 31, 39, 42, 43, 49, 53, 54, 59, 62, 65, 73, 93, 99, 118, 119, 120, 128</code></pre>
+<br />
+على سبيل المثال، البتات الأولى من التسلسل الـ 22 (طور=128) هي:
+<br /><br />
+<pre><code>1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, ...</code></pre>
+<br />
+يتم تحويل هذا التسلسل بالطريقة التالية لربطه بالإشارة:
+<br /><br />
+<pre><code>+0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5, -0.5, ...</code></pre>
+<br />
+إذا كان التسلسل مترابطاً، فإن قيمة البت المفكوك هي 0، وإذا كان مضاداً للترابط، فإن قيمة البت المفكوك هي 1.
+<br /><br />
+من الناحية النظرية، فإن ارتباط تسلسل بطول 32767 سيحقق مكسب معالجة قدره <code>10*log10(32767) = 45,2 dB</code>. فهل سيكون ذلك كافياً؟ نأمل ألا تكون القطط قد أحدثت الكثير من الضجيج!
+<br />
+<img src="./assets/images/signal-sur-chat.jpg">
+                            </p>
+                            <h4>الملف المطلوب دراسته:</h4>
+                            <p>../files/signal-sur-chat.wav</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>FCSC 2025</h3>
+                            <h2 class="section-title">Hackropole</h2>
+                            <p class="section-subtitle">
+                                الرابط الرسمي:
+                                <a target="_blank" href="https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/">https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/</a>
+                                <br />
+                                المؤلف: PMR
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>التعلم</h3>
+                            <h2 class="section-title">الوثائق ومقاطع الفيديو</h2>
+                            <p class="section-subtitle">
+                                لا توجد وثائق في الوقت الحالي
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>المساعدة</h3>
+                            <h2 class="section-title">نصائح وإرشادات</h2>
+                            <p class="section-subtitle">
+                                <a target="_blank"
+                                    href="https://discord.com/channels/1175764392307077120/1175764601716092948">موضوع على Discord</a>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+            <!--End of Ctf-->
+        </main>
+        <!--End Main Content Area-->
+
+        <a id="scrollUp" href="#wrapper" style="position: fixed; z-index: 1000;"
+            aria-label="الرجوع إلى أعلى الصفحة" title="الرجوع إلى رأس الموقع"></a>
+    </div>
+</body>
+
+</html>

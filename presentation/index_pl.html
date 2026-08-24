@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="pl">
+    <meta charset="UTF-8">
+    <!--Page Title-->
+    <title>Hack-Oeil - CTF-y od Cyrhades</title>
+    <!--Meta Keywords and Description-->
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link rel="shortcut icon" href="./assets/images/favicon.ico" title="Favicon" />
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700,800' rel='stylesheet' type='text/css'>
+    <script src="./assets/js/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifie si la fenêtre est dans une iframe
+            if (window.self !== window.top) {
+                document.querySelectorAll('a').forEach((link) => {
+                    link.addEventListener('click', (event) => {
+                        const a = event.target.closest('a[href^="http"]');
+                        if (a) {
+                            event.preventDefault();
+                            window.parent.postMessage({
+                                type: "open-external",
+                                url: a.href
+                            }, "*");
+                        }
+                    });
+                });
+            }
+            // Active la coloration syntaxique :
+            if (window.hljs) {
+                hljs.highlightAll();
+            } else {
+                console.error("Highlight.js non chargé !");
+            }
+        });
+    </script>
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <!--Main Content Area-->
+        <main id="content">
+            <!--Ctf-->
+            <section class="ctf scrollto">
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Wyzwanie #564</h3>
+                            <h2 class="section-title">Sygnał na kocie</h2>
+                            <p>
+Techniki rozpraszania widma z bezpośrednią sekwencją (DSSS) są niesamowite. Umożliwiają wielu systemom radiowym jednoczesną komunikację na tym samym kanale (znane jako CDMA: Code Division Multiple Access) i mogą wytrzymać bardzo niekorzystny stosunek sygnału do szumu. Aby to zilustrować, przeprowadzimy następujący eksperyment: czy uda Ci się odzyskać flagę, jeśli prześlę jej 22 znaki jednocześnie i, aby skomplikować sprawę, dodam szum… kotów?
+<br /><br />
+W tym eksperymencie stosunek sygnału do kota dla każdej litery może spaść nawet do -45 dB!
+<br /><br />
+Użyłem kodów Golda (lub sekwencji Golda, nazwanych na cześć Roberta Golda). Powstają one przez obliczenie XOR dwóch sekwencji o maksymalnej długości (2^n-1) wygenerowanych przez dwa rejestry LFSR (Linear Feedback Shift Register) o tej samej długości (n), z których jedna sekwencja jest przesunięta względem drugiej. Otrzymane sekwencje charakteryzują się bardzo słabą korelacją wzajemną: idealnie do naszego eksperymentu!
+<br /><br />
+Satelity GPS również używają kodów Golda do nadawania sygnałów, ale uwaga – moje są inne: oba rejestry LFSR mają długość 15 bitów i posiadają wielomiany generujące:
+<br /><br />
+<pre><code>G1(x) = x^15 + x^7 + 1
+G2(x) = x^15 + x^10 + x^5 + x^4 + 1</code></pre>
+<br />
+Wartości inicjalizacyjne obu rejestrów wynoszą <code>0x7FFF</code>.
+<br /><br />
+Ponieważ nie chciałem, aby plik audio trwał zbyt długo, nałożyłem na siebie 22 znaki ASCII (8 bitów) flagi, każdy z własnym kodem Golda.
+<br /><br />
+Nie chciałem komplikować spraw: pierwsza próbka dźwięku zawiera pierwszy bit sekwencji Golda i tak dalej (jeden bit sekwencji na próbkę audio).
+<br /><br />
+Zatem sygnał audio składa się z 262 136 próbek, czyli 8 razy 32 767 (liczba bitów znaku razy długość jednej z moich sekwencji Golda).
+<br /><br />
+Bity bajtu są przesyłane od najbardziej znaczącego (MSB) do najmniej znaczącego (LSB).
+<br /><br />
+Aby znaleźć każdy znak flagi, należy użyć charakterystycznej fazy przypisanego mu kodu Golda.
+<br /><br />
+22 fazy (odpowiadające liczbie bitów wyprzedzenia rejestru <code>G2</code> względem rejestru <code>G1</code>) są następujące:
+<br /><br />
+<pre><code>4, 7, 8, 24, 27, 31, 39, 42, 43, 49, 53, 54, 59, 62, 65, 73, 93, 99, 118, 119, 120, 128</code></pre>
+<br />
+Na przykład pierwsze bity 22. sekwencji (faza=128) to:
+<br /><br />
+<pre><code>1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, ...</code></pre>
+<br />
+Ta sekwencja jest przekształcana w następujący sposób w celu korelacji z sygnałem:
+<br /><br />
+<pre><code>+0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5, -0.5, ...</code></pre>
+<br />
+Jeśli sekwencja jest skorelowana, zdekodowany bit wynosi 0, jeśli jest antykorelowana, zdekodowany bit wynosi 1.
+<br /><br />
+W teorii korelacja sekwencji o długości 32767 da zysk przetwarzania wynoszący <code>10*log10(32767) = 45,2 dB</code>. Czy to wystarczy? Miejmy nadzieję, że koty nie narobiły zbyt dużego hałasu!
+<br />
+<img src="./assets/images/signal-sur-chat.jpg">
+                            </p>
+                            <h4>Plik do analizy:</h4>
+                            <p>../files/signal-sur-chat.wav</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>FCSC 2025</h3>
+                            <h2 class="section-title">Hackropole</h2>
+                            <p class="section-subtitle">
+                                Oficjalny link:
+                                <a target="_blank" href="https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/">https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/</a>
+                                <br />
+                                Autor: PMR
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Nauka</h3>
+                            <h2 class="section-title">Dokumentacja i Wideo</h2>
+                            <p class="section-subtitle">
+                                Brak dokumentacji w tej chwili
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Pomoc</h3>
+                            <h2 class="section-title">Wskazówki i podpowiedzi</h2>
+                            <p class="section-subtitle">
+                                <a target="_blank"
+                                    href="https://discord.com/channels/1175764392307077120/1175764601716092948">Wątek na Discordzie</a>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+            <!--End of Ctf-->
+        </main>
+        <!--End Main Content Area-->
+
+        <a id="scrollUp" href="#wrapper" style="position: fixed; z-index: 1000;"
+            aria-label="Przewiń na górę strony" title="Powrót na górę strony"></a>
+    </div>
+</body>
+
+</html>

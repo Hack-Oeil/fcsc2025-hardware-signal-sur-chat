@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="ru">
+    <meta charset="UTF-8">
+    <!--Page Title-->
+    <title>Hack-Oeil - CTF от Cyrhades</title>
+    <!--Meta Keywords and Description-->
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link rel="shortcut icon" href="./assets/images/favicon.ico" title="Favicon" />
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700,800' rel='stylesheet' type='text/css'>
+    <script src="./assets/js/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifie si la fenêtre est dans une iframe
+            if (window.self !== window.top) {
+                document.querySelectorAll('a').forEach((link) => {
+                    link.addEventListener('click', (event) => {
+                        const a = event.target.closest('a[href^="http"]');
+                        if (a) {
+                            event.preventDefault();
+                            window.parent.postMessage({
+                                type: "open-external",
+                                url: a.href
+                            }, "*");
+                        }
+                    });
+                });
+            }
+            // Active la coloration syntaxique :
+            if (window.hljs) {
+                hljs.highlightAll();
+            } else {
+                console.error("Highlight.js non chargé !");
+            }
+        });
+    </script>
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <!--Main Content Area-->
+        <main id="content">
+            <!--Ctf-->
+            <section class="ctf scrollto">
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Челлендж #564</h3>
+                            <h2 class="section-title">Сигнал на кошке</h2>
+                            <p>
+Методы прямого расширения спектра (DSSS) просто великолепны. Они позволяют нескольким радиосистемам одновременно связываться на одном канале (известно как CDMA: кодовое разделение каналов), а также устойчивы к очень неблагоприятным соотношениям сигнал/шум. Чтобы проиллюстрировать это, мы проведем следующий эксперимент: сможете ли вы восстановить флаг, если я передам его 22 символа одновременно и, чтобы усложнить задачу, добавлю шум… кошек?
+<br /><br />
+В этом эксперименте соотношение сигнал/кошка для каждой буквы может достигать -45 дБ!
+<br /><br />
+Я использовал коды Голда (или последовательности Голда, названные в честь Роберта Голда). Они формируются путем вычисления XOR двух последовательностей максимальной длины (2^n-1), полученных из двух LFSR (регистров сдвига с линейной обратной связью) одинаковой длины (n), одна из которых сдвинута относительно другой. Полученные последовательности обладают свойством очень слабой взаимной корреляции: это идеально подходит для нашего эксперимента!
+<br /><br />
+Спутники GPS также используют коды Голда для передачи сигналов, но будьте внимательны: мои отличаются. Оба LFSR имеют длину 15 бит и следующие порождающие полиномы:
+<br /><br />
+<pre><code>G1(x) = x^15 + x^7 + 1
+G2(x) = x^15 + x^10 + x^5 + x^4 + 1</code></pre>
+<br />
+Начальные значения обоих регистров — <code>0x7FFF</code>.
+<br /><br />
+Поскольку я не хотел, чтобы аудиофайл был слишком длинным, я наложил 22 символа ASCII (8 бит) флага друг на друга, каждый со своим собственным кодом Голда.
+<br /><br />
+Я не стал усложнять: первый сэмпл звука содержит первый бит последовательности Голда и так далее (один бит последовательности на один звуковой сэмпл).
+<br /><br />
+Таким образом, аудиосигнал состоит из 262 136 сэмплов, что составляет 8 раз по 32 767 (количество бит в символе, умноженное на длину одной из моих последовательностей Голда).
+<br /><br />
+Биты байта передаются от старшего (MSB) к младшему (LSB).
+<br /><br />
+Чтобы найти каждый символ флага, необходимо использовать характерную фазу назначенного ему кода Голда.
+<br /><br />
+22 фазы (соответствующие числу бит опережения регистра <code>G2</code> относительно регистра <code>G1</code>) следующие:
+<br /><br />
+<pre><code>4, 7, 8, 24, 27, 31, 39, 42, 43, 49, 53, 54, 59, 62, 65, 73, 93, 99, 118, 119, 120, 128</code></pre>
+<br />
+Например, первые биты 22-й последовательности (фаза=128) выглядят так:
+<br /><br />
+<pre><code>1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, ...</code></pre>
+<br />
+Эта последовательность преобразуется следующим образом для корреляции с сигналом:
+<br /><br />
+<pre><code>+0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5, -0.5, ...</code></pre>
+<br />
+Если последовательность коррелирует, декодированный бит равен 0, если антикоррелирует — декодированный бит равен 1.
+<br /><br />
+Теоретически корреляция последовательности длиной 32767 обеспечит выигрыш от обработки <code>10*log10(32767) = 45,2 dB</code>. Будет ли этого достаточно? Будем надеяться, что кошки не наделали слишком много шума!
+<br />
+<img src="./assets/images/signal-sur-chat.jpg">
+                            </p>
+                            <h4>Файл для анализа:</h4>
+                            <p>../files/signal-sur-chat.wav</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>FCSC 2025</h3>
+                            <h2 class="section-title">Hackropole</h2>
+                            <p class="section-subtitle">
+                                Официальная ссылка:
+                                <a target="_blank" href="https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/">https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/</a>
+                                <br />
+                                Автор: PMR
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Обучение</h3>
+                            <h2 class="section-title">Документация и Видео</h2>
+                            <p class="section-subtitle">
+                                На данный момент документация отсутствует
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Помощь</h3>
+                            <h2 class="section-title">Советы и подсказки</h2>
+                            <p class="section-subtitle">
+                                <a target="_blank"
+                                    href="https://discord.com/channels/1175764392307077120/1175764601716092948">Ветка в Discord</a>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+            <!--End of Ctf-->
+        </main>
+        <!--End Main Content Area-->
+
+        <a id="scrollUp" href="#wrapper" style="position: fixed; z-index: 1000;"
+            aria-label="Наверх страницы" title="Вернуться в начало страницы"></a>
+    </div>
+</body>
+
+</html>

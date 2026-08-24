@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="fr">
+    <meta charset="UTF-8">
+    <!--Page Title-->
+    <title>Hack-Oeil - Les CTFs de Cyrhades</title>
+    <!--Meta Keywords and Description-->
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link rel="shortcut icon" href="./assets/images/favicon.ico" title="Favicon" />
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700,800' rel='stylesheet' type='text/css'>
+    <script src="./assets/js/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifie si la fenêtre est dans une iframe
+            if (window.self !== window.top) {
+                document.querySelectorAll('a').forEach((link) => {
+                    link.addEventListener('click', (event) => {
+                        const a = event.target.closest('a[href^="http"]');
+                        if (a) {
+                            event.preventDefault();
+                            window.parent.postMessage({
+                                type: "open-external",
+                                url: a.href
+                            }, "*");
+                        }
+                    });
+                });
+            }
+            // Active la coloration syntaxique :
+            if (window.hljs) {
+                hljs.highlightAll();
+            } else {
+                console.error("Highlight.js non chargé !");
+            }
+        });
+    </script>
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <!--Main Content Area-->
+        <main id="content">
+            <!--Ctf-->
+            <section class="ctf scrollto">
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Challenge #564</h3>
+                            <h2 class="section-title">Signal sur chat</h2>
+                            <p>
+Les techniques d’étalement de spectre à séquence directe (DSSS) sont formidables. Elles permettent à plusieurs systèmes radio de communiquer en même temps sur le même canal (on appelle cela le CDMA : Code Division Multiple Access), et elle peuvent aussi résister à des rapports signal à bruit très défavorables. Pour illustrer cela nous allons mener l’expérience suivante : pourrez-vous retrouver le flag si je transmet ses 22 caractères en même temps et si, pour compliquer les choses, j’ajoute du bruit… de chat.
+<br /><br />
+Dans cette expérience, le rapport signal sur chat de chaque lettre peut atteindre jusqu’à -45dB!
+<br /><br />
+J’ai utilisé des codes de Gold (ou séquences de Gold, d’après un certain Robert Gold). Il sont formés en calculant le XOR de deux séquences de longueur maximale (2^n-1) issue de deux LFSR (Linear Feedback Shift Register) de même longueur (n), dont l’une des séquence est décalée par rapport à l’autre. Les séquences obtenues ainsi ont la propriété d’être très faiblement corrélées entre elles : c’est parfait pour notre expérience !
+<br /><br />
+Les satellites GPS utilisent aussi des codes de Gold pour émettre leurs signaux, mais attention, les miens sont différents : les deux LFSR font une longueur de 15 bits, et ont pour polynômes générateurs :
+<br /><br />
+<pre><code>G1(x) = x^15 + x^7 + 1
+G2(x) = x^15 + x^10 + x^5 + x^4 + 1</code></pre>
+<br />
+Les valeurs d’initialisation des deux registres sont <code>0x7FFF</code>.
+<br /><br />
+Comme je ne voulais pas que le fichier audio dure trop longtemps, j’ai superposé les 22 caractères ASCII (8 bits) du flag les uns par dessus les autres, chacun avec son propre code de Gold.
+<br /><br />
+Je n’ai pas voulu compliquer les choses : le premier échantillon du son contient le premier bit de la séquence de Gold, et ainsi de suite (un bit de séquence par échantillon sonore).
+<br /><br />
+Ainsi, le signal audio est composé de 262136 échantillons, soit 8 fois 32767 (le nombre de bits d’un caractère fois la longueur d’une de mes séquences de Gold).
+<br /><br />
+Les bits de l’octet sont transmis du poids le plus fort au poids le plus faible.
+<br /><br />
+Pour trouver chaque caractère du flag, il faut utiliser la phase caractéristique du code de Gold qui lui a été attribué.
+<br /><br />
+Les 22 phases (qui correspondent au nombre de bits d’avance du registre <code>G2</code> sur le registre <code>G1</code>) sont les suivantes :
+<br /><br />
+<pre><code>4, 7, 8, 24, 27, 31, 39, 42, 43, 49, 53, 54, 59, 62, 65, 73, 93, 99, 118, 119, 120, 128</code></pre>
+<br />
+Par exemple, les premiers bits de la 22ème séquence (phase=128) sont :
+<br /><br />
+<pre><code>1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, ...</code></pre>
+<br />
+Cette séquence est transformée de la manière suivante pour être corrélée au signal :
+<br /><br />
+<pre><code>+0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5, -0.5, ...</code></pre>
+<br />
+Si la séquence est corrélée, le bit décodé vaut 0, si elle est anti-corrélée, le bit décodé vaut 1.
+<br /><br />
+En théorie, la corrélation d’une séquence de longueur 32767 va apporter un gain de traitement de <code>10*log10(32767) = 45,2 dB</code>. Est-ce que cela sera suffisant ? Espérons que les chats n’ont pas fait trop de bruit !
+<br />
+<img src="./assets/images/signal-sur-chat.jpg">
+                            </p>
+                            <h4>Fichier à étudier:</h4>
+                            <p>../files/signal-sur-chat.wav</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>FCSC 2025</h3>
+                            <h2 class="section-title">Hackropole</h2>
+                            <p class="section-subtitle">
+                                Lien officiel :
+                                <a target="_blank" href="https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/">https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/</a>
+                                <br />
+                                Auteur: PMR
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Apprentissage</h3>
+                            <h2 class="section-title">Documentations et Vidéos</h2>
+                            <p class="section-subtitle">
+                                Aucune documentation pour le moment
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Aide</h3>
+                            <h2 class="section-title">Conseils et indices</h2>
+                            <p class="section-subtitle">
+                                <a target="_blank"
+                                    href="https://discord.com/channels/1175764392307077120/1175764601716092948">Fil sur
+                                    le Discord</a>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+            <!--End of Ctf-->
+        </main>
+        <!--End Main Content Area-->
+
+        <a id="scrollUp" href="#wrapper" style="position: fixed; z-index: 1000;"
+            aria-label="Remonter en haut de la page" title="Remonter en tête de site"></a>
+    </div>
+</body>
+
+</html>

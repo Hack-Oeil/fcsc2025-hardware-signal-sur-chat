@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="pt">
+    <meta charset="UTF-8">
+    <!--Page Title-->
+    <title>Hack-Oeil - Os CTFs de Cyrhades</title>
+    <!--Meta Keywords and Description-->
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link rel="shortcut icon" href="./assets/images/favicon.ico" title="Favicon" />
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700,800' rel='stylesheet' type='text/css'>
+    <script src="./assets/js/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifie si la fenêtre est dans une iframe
+            if (window.self !== window.top) {
+                document.querySelectorAll('a').forEach((link) => {
+                    link.addEventListener('click', (event) => {
+                        const a = event.target.closest('a[href^="http"]');
+                        if (a) {
+                            event.preventDefault();
+                            window.parent.postMessage({
+                                type: "open-external",
+                                url: a.href
+                            }, "*");
+                        }
+                    });
+                });
+            }
+            // Active la coloration syntaxique :
+            if (window.hljs) {
+                hljs.highlightAll();
+            } else {
+                console.error("Highlight.js non chargé !");
+            }
+        });
+    </script>
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <!--Main Content Area-->
+        <main id="content">
+            <!--Ctf-->
+            <section class="ctf scrollto">
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Desafio #564</h3>
+                            <h2 class="section-title">Sinal sobre gato</h2>
+                            <p>
+As técnicas de espalhamento espectral por sequência direta (DSSS) são formidáveis. Elas permitem que vários sistemas de rádio comuniquem ao mesmo tempo no mesmo canal (conhecido como CDMA: Acesso Múltiplo por Divisão de Código) e também resistem a relações sinal-ruído muito desfavoráveis. Para ilustrar isso, faremos o seguinte experimento: você conseguirá recuperar a flag se eu transmitir seus 22 caracteres simultaneamente e, para complicar as coisas, adicionar ruído… de gato?
+<br /><br />
+Neste experimento, a relação sinal-gato de cada letra pode chegar a até -45 dB!
+<br /><br />
+Utilizei códigos de Gold (ou sequências de Gold, em homenagem a Robert Gold). Eles são formados calculando o XOR de duas sequências de comprimento máximo (2^n-1) geradas por dois LFSRs (Linear Feedback Shift Register) do mesmo comprimento (n), com uma sequência deslocada em relação à outra. As sequências obtidas têm a propriedade de estarem muito fracamente correlacionadas entre si: perfeito para o nosso experimento!
+<br /><br />
+Os satélites GPS também usam códigos de Gold para transmitir seus sinais, mas atenção: os meus são diferentes. Ambos os LFSRs têm comprimento de 15 bits e possuem os seguintes polinômios geradores:
+<br /><br />
+<pre><code>G1(x) = x^15 + x^7 + 1
+G2(x) = x^15 + x^10 + x^5 + x^4 + 1</code></pre>
+<br />
+Os valores de inicialização de ambos os registradores são <code>0x7FFF</code>.
+<br /><br />
+Como eu não queria que o arquivo de áudio ficasse muito longo, sobrepus os 22 caracteres ASCII (8 bits) da flag uns sobre os outros, cada um com seu próprio código de Gold.
+<br /><br />
+Não quis complicar: a primeira amostra do som contém o primeiro bit da sequência de Gold e assim por diante (um bit de sequência por amostra de áudio).
+<br /><br />
+Assim, o sinal de áudio é composto por 262.136 amostras, ou seja, 8 vezes 32.767 (o número de bits de um caractere multiplicado pelo comprimento de uma das minhas sequências de Gold).
+<br /><br />
+Os bits do byte são transmitidos do bit mais significativo (MSB) para o menos significativo (LSB).
+<br /><br />
+Para encontrar cada caractere da flag, você deve usar a fase característica do código de Gold atribuído a ele.
+<br /><br />
+As 22 fases (que correspondem ao número de bits de avanço do registrador <code>G2</code> em relação ao registrador <code>G1</code>) são as seguintes:
+<br /><br />
+<pre><code>4, 7, 8, 24, 27, 31, 39, 42, 43, 49, 53, 54, 59, 62, 65, 73, 93, 99, 118, 119, 120, 128</code></pre>
+<br />
+Por exemplo, os primeiros bits da 22ª sequência (fase=128) são:
+<br /><br />
+<pre><code>1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, ...</code></pre>
+<br />
+Essa sequência é transformada da seguinte maneira para ser correlacionada com o sinal:
+<br /><br />
+<pre><code>+0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5, -0.5, ...</code></pre>
+<br />
+Se a sequência estiver correlacionada, o bit decodificado vale 0; se estiver anticorrelacionada, o bit decodificado vale 1.
+<br /><br />
+Em teoria, a correlação de uma sequência de comprimento 32767 trará um ganho de processamento de <code>10*log10(32767) = 45,2 dB</code>. Isso será suficiente? Esperemos que os gatos não tenham feito muito barulho!
+<br />
+<img src="./assets/images/signal-sur-chat.jpg">
+                            </p>
+                            <h4>Arquivo para analisar:</h4>
+                            <p>../files/signal-sur-chat.wav</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>FCSC 2025</h3>
+                            <h2 class="section-title">Hackropole</h2>
+                            <p class="section-subtitle">
+                                Link oficial:
+                                <a target="_blank" href="https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/">https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/</a>
+                                <br />
+                                Autor: PMR
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Aprendizado</h3>
+                            <h2 class="section-title">Documentações e Vídeos</h2>
+                            <p class="section-subtitle">
+                                Nenhuma documentação no momento
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>Ajuda</h3>
+                            <h2 class="section-title">Dicas e pistas</h2>
+                            <p class="section-subtitle">
+                                <a target="_blank"
+                                    href="https://discord.com/channels/1175764392307077120/1175764601716092948">Tópico no Discord</a>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+            <!--End of Ctf-->
+        </main>
+        <!--End Main Content Area-->
+
+        <a id="scrollUp" href="#wrapper" style="position: fixed; z-index: 1000;"
+            aria-label="Voltar ao topo da página" title="Voltar ao topo do site"></a>
+    </div>
+</body>
+
+</html>

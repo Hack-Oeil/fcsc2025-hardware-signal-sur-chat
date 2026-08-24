@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="th">
+    <meta charset="UTF-8">
+    <!--Page Title-->
+    <title>Hack-Oeil - Cyrhades CTF</title>
+    <!--Meta Keywords and Description-->
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link rel="shortcut icon" href="./assets/images/favicon.ico" title="Favicon" />
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700,800' rel='stylesheet' type='text/css'>
+    <script src="./assets/js/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifie si la fenêtre est dans une iframe
+            if (window.self !== window.top) {
+                document.querySelectorAll('a').forEach((link) => {
+                    link.addEventListener('click', (event) => {
+                        const a = event.target.closest('a[href^="http"]');
+                        if (a) {
+                            event.preventDefault();
+                            window.parent.postMessage({
+                                type: "open-external",
+                                url: a.href
+                            }, "*");
+                        }
+                    });
+                });
+            }
+            // Active la coloration syntaxique :
+            if (window.hljs) {
+                hljs.highlightAll();
+            } else {
+                console.error("Highlight.js non chargé !");
+            }
+        });
+    </script>
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <!--Main Content Area-->
+        <main id="content">
+            <!--Ctf-->
+            <section class="ctf scrollto">
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>ความท้าทาย #564</h3>
+                            <h2 class="section-title">สัญญาณบนแมว</h2>
+                            <p>
+เทคนิคการขยายสเปกตรัมลำดับโดยตรง (DSSS) ยอดเยี่ยมมาก ช่วยให้ระบบวิทยุหลายระบบสามารถสื่อสารพร้อมกันบนช่องสัญญาณเดียวกันได้ (เรียกว่า CDMA: Code Division Multiple Access) และยังทนทานต่ออัตราส่วนสัญญาณต่อสัญญาณรบกวนที่ไม่เอื้ออำนวยได้อย่างมาก เพื่อแสดงให้เห็นสิ่งนี้ เราจะทำการทดลองต่อไปนี้: คุณจะสามารถค้นหา flag ได้หรือไม่หากฉันส่งอักขระ 22 ตัวพร้อมกัน และเพื่อเพิ่มความซับซ้อน ฉันได้เพิ่มสัญญาณรบกวน… ของแมวเข้าไป
+<br /><br />
+ในการทดลองนี้ อัตราส่วนสัญญาณต่อแมวของแต่ละตัวอักษรอาจลดลงถึง -45dB!
+<br /><br />
+ฉันใช้รหัสโกลด์ (หรือลำดับโกลด์ ตามชื่อของ Robert Gold) รหัสเหล่านี้สร้างขึ้นโดยการคำนวณ XOR ของสองลำดับความยาวสูงสุด (2^n-1) ที่ได้จาก LFSR (Linear Feedback Shift Register) สองตัวที่มีความยาวเท่ากัน (n) โดยลำดับหนึ่งถูกเลื่อนเทียบกับอีกลำดับหนึ่ง ลำดับที่ได้มีคุณสมบัติที่มีความสัมพันธ์กันต่ำมาก ซึ่งสมบูรณ์แบบสำหรับการทดลองของเรา!
+<br /><br />
+ดาวเทียม GPS ยังใช้รหัสโกลด์ในการส่งสัญญาณด้วย แต่โปรดระวัง รหัสของฉันแตกต่างออกไป: LFSR ทั้งสองมีความยาว 15 บิต และมีพหุนามตัวสร้างดังนี้:
+<br /><br />
+<pre><code>G1(x) = x^15 + x^7 + 1
+G2(x) = x^15 + x^10 + x^5 + x^4 + 1</code></pre>
+<br />
+ค่าเริ่มต้นของทั้งสองรีจิสเตอร์คือ <code>0x7FFF</code>
+<br /><br />
+เนื่องจากฉันไม่ต้องการให้ไฟล์เสียงยาวเกินไป ฉันจึงซ้อนทับอักขระ ASCII ทั้ง 22 ตัว (8 บิต) ของ flag ซ้อนทับกัน โดยแต่ละตัวมีรหัสโกลด์ของตัวเอง
+<br /><br />
+ฉันไม่ได้ต้องการทำให้เรื่องซับซ้อน: ตัวอย่างแรกของเสียงประกอบด้วยบิตแรกของลำดับโกลด์ และต่อๆ ไป (หนึ่งบิตลำดับต่อหนึ่งตัวอย่างเสียง)
+<br /><br />
+ดังนั้นสัญญาณเสียงจึงประกอบด้วย 262,136 ตัวอย่าง ซึ่งก็คือ 8 เท่าของ 32,767 (จำนวนบิตของอักขระคูณด้วยความยาวของลำดับโกลด์ตัวหนึ่ง)
+<br /><br />
+บิตของไบต์จะถูกส่งจากบิตที่มีนัยสำคัญมากที่สุด (MSB) ไปยังบิตที่มีนัยสำคัญน้อยที่สุด (LSB)
+<br /><br />
+ในการค้นหาแต่ละอักขระของ flag คุณต้องใช้เฟสลักษณะเฉพาะของรหัสโกลด์ที่กำหนดให้กับมัน
+<br /><br />
+เฟสทั้ง 22 เฟส (ซึ่งสอดคล้องกับจำนวนบิตนำหน้าของรีจิสเตอร์ <code>G2</code> เหนือรีจิสเตอร์ <code>G1</code>) มีดังต่อไปนี้:
+<br /><br />
+<pre><code>4, 7, 8, 24, 27, 31, 39, 42, 43, 49, 53, 54, 59, 62, 65, 73, 93, 99, 118, 119, 120, 128</code></pre>
+<br />
+ตัวอย่างเช่น บิตแรกๆ ของลำดับที่ 22 (เฟส=128) คือ:
+<br /><br />
+<pre><code>1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, ...</code></pre>
+<br />
+ลำดับนี้ถูกแปลงในลักษณะต่อไปนี้เพื่อให้สัมพันธ์กับสัญญาณ:
+<br /><br />
+<pre><code>+0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5, -0.5, ...</code></pre>
+<br />
+หากลำดับมีความสัมพันธ์กัน บิตที่ถอดรหัสจะมีค่า 0 หากมีความสัมพันธ์แบบตรงกันข้าม บิตที่ถอดรหัสจะมีค่า 1
+<br /><br />
+ในทางทฤษฎี การเชื่อมโยงลำดับที่มีความยาว 32767 จะให้เกนการประมวลผล <code>10*log10(32767) = 45,2 dB</code> สิ่งนี้จะเพียงพอหรือไม่? หวังว่าพวกแมวจะไม่ได้ส่งเสียงดังเกินไป!
+<br />
+<img src="./assets/images/signal-sur-chat.jpg">
+                            </p>
+                            <h4>ไฟล์ที่ต้องศึกษา:</h4>
+                            <p>../files/signal-sur-chat.wav</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>FCSC 2025</h3>
+                            <h2 class="section-title">Hackropole</h2>
+                            <p class="section-subtitle">
+                                ลิงก์อย่างเป็นทางการ:
+                                <a target="_blank" href="https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/">https://hackropole.fr/fr/challenges/hardware/fcsc2025-hardware-signal-sur-chat/</a>
+                                <br />
+                                ผู้เขียน: PMR
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>การเรียนรู้</h3>
+                            <h2 class="section-title">เอกสารและวิดีโอ</h2>
+                            <p class="section-subtitle">
+                                ยังไม่มีเอกสารในขณะนี้
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="row clearfix">
+                    <div class="col-1">
+                        <div class="section-heading">
+                            <h3>ช่วยเหลือ</h3>
+                            <h2 class="section-title">คำแนะนำและคำใบ้</h2>
+                            <p class="section-subtitle">
+                                <a target="_blank"
+                                    href="https://discord.com/channels/1175764392307077120/1175764601716092948">กระทู้บน Discord</a>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+            <!--End of Ctf-->
+        </main>
+        <!--End Main Content Area-->
+
+        <a id="scrollUp" href="#wrapper" style="position: fixed; z-index: 1000;"
+            aria-label="เลื่อนกลับไปด้านบน" title="กลับสู่ด้านบนสุดของเว็บไซต์"></a>
+    </div>
+</body>
+
+</html>
